@@ -8,7 +8,7 @@
 <br/>
 
 <div align="center">
-  <a href="https://github.com/Tristan-DBD/hubapp/releases/latest/download/app-arm64-v8a-release.apk">
+  <a href="https://github.com/Tristan-DBD/hubapp/releases/latest/download/app-release.apk">
     <img src="https://img.shields.io/badge/📲_Télécharger_le_dernier_APK-7c3aed?style=for-the-badge&logo=android&logoColor=white" />
   </a>
   &nbsp;
@@ -59,7 +59,7 @@ Et parce que HubApp est modulaire, **d'autres outils peuvent être ajoutés** sa
 
 Téléchargez le dernier APK, installez-le sur votre appareil Android, et c'est tout.
 
-<a href="https://github.com/Tristan-DBD/hubapp/releases/latest/download/app-arm64-v8a-release.apk">
+<a href="https://github.com/Tristan-DBD/hubapp/releases/latest/download/app-release.apk">
   <img src="https://img.shields.io/badge/📲%20Télécharger%20HubApp%20pour%20Android-7c3aed?style=for-the-badge&logo=android&logoColor=white" />
 </a>
 
