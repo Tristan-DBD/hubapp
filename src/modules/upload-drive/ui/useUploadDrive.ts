@@ -174,7 +174,7 @@ export function useUploadDrive() {
       if (queue.running) {
         Alert.alert(
           'Upload en cours',
-          "Voulez-vous annuler l'upload et quitter ?",
+          'Voulez-vous annuler l\'upload et quitter ?',
           [
             { text: 'Rester', style: 'cancel' },
             {
@@ -275,7 +275,7 @@ export function useUploadDrive() {
     if (!destinationFolder) {
       Alert.alert(
         'Erreur',
-        "Veuillez d'abord sélectionner un dossier de destination.",
+        'Veuillez d\'abord sélectionner un dossier de destination.',
       )
       return
     }
