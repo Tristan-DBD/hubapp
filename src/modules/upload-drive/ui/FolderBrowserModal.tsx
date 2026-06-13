@@ -4,16 +4,15 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  StyleSheet,
   Modal,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from 'react-native'
-import { authService } from '../../../core/google/auth-service'
+import { authService } from '../../../core/google'
 import { driveService } from '../../../core/google/drive-service'
 import { theme } from '../../../core/theme'
 import type { DriveFolder } from '../../../core/types'
+import { styles } from './FolderBrowserModal.styles'
 
 interface FolderBrowserModalProps {
   onCancel: () => void;
@@ -207,6 +206,9 @@ export function FolderBrowserModal({ onSelect, onCancel }: FolderBrowserModalPro
               onChangeText={setNewFolderName}
               placeholder="Nouveau dossier"
               placeholderTextColor={theme.textMuted}
+              returnKeyType="done"
+              onSubmitEditing={handleCreateFolder}
+              blurOnSubmit
             />
             <TouchableOpacity
               style={[styles.createBtn, (!newFolderName.trim() || creating) && styles.disabled]}
@@ -234,106 +236,3 @@ export function FolderBrowserModal({ onSelect, onCancel }: FolderBrowserModalPro
     </Modal>
   )
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  popup: {
-    backgroundColor: theme.surface,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: theme.border,
-    maxHeight: '90%',
-  },
-  loadingContainer: {
-    padding: 40,
-    alignItems: 'center',
-    gap: 16,
-  },
-  loadingText: {
-    color: theme.textSecondary,
-    fontSize: 15,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  backBtn: { paddingRight: 12 },
-  backBtnText: { color: theme.primary, fontSize: 15, fontWeight: '600' },
-  title: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.primaryLight,
-    textAlign: 'center',
-  },
-  closeBtn: { paddingLeft: 12 },
-  closeBtnText: { color: theme.textSecondary, fontSize: 20 },
-  switchAccountBtn: {
-    alignSelf: 'flex-end',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    marginBottom: 8,
-  },
-  switchAccountText: {
-    color: theme.textSecondary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  list: { maxHeight: 300, marginBottom: 12 },
-  folderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginBottom: 4,
-    backgroundColor: theme.surfaceAlt,
-  },
-  folderIcon: { fontSize: 20, marginRight: 10 },
-  folderName: { flex: 1, color: theme.text, fontSize: 15 },
-  chevron: { color: theme.textMuted, fontSize: 20, marginLeft: 8 },
-  emptyText: {
-    textAlign: 'center',
-    color: theme.textMuted,
-    paddingVertical: 20,
-    fontSize: 14,
-  },
-  createRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  createInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.border,
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 14,
-    backgroundColor: theme.inputBg,
-    color: theme.text,
-  },
-  createBtn: {
-    backgroundColor: theme.primary,
-    borderRadius: 8,
-    width: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  createBtnText: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
-  disabled: { opacity: 0.4 },
-  confirmBtn: {
-    backgroundColor: theme.success,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  confirmBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-})

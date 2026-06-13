@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react'
-import { View, Text, TextInput, FlatList, TouchableOpacity, Alert } from 'react-native'
-import type { IncomeEntry } from '../domain/finance'
+import React, { useState, useCallback, useRef } from 'react'
+import { View, Text, TextInput, FlatList, TouchableOpacity, Alert, Vibration, LayoutAnimation } from 'react-native'
+import { ConfirmModal } from '../../../core/ui'
+import { type IncomeEntry, isDuplicateLabel } from '../domain/finance'
 import { styles } from './AccountsScreen.styles'
 
 interface IncomeSectionProps {
@@ -8,23 +9,25 @@ interface IncomeSectionProps {
   onIncomesChange: (incomes: IncomeEntry[]) => void;
 }
 
-function isDuplicate(items: IncomeEntry[], label: string, excludeId?: string): boolean {
-  return items.some((i) => i.label.toLowerCase() === label.toLowerCase() && i.id !== excludeId)
-}
-
 export function IncomeSection({ incomes, onIncomesChange }: IncomeSectionProps) {
   const [newLabel, setNewLabel] = useState('')
   const [newAmount, setNewAmount] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null)
   const [editLabel, setEditLabel] = useState('')
   const [editAmount, setEditAmount] = useState('')
+  const newLabelRef = useRef<TextInput>(null)
+  const newAmountRef = useRef<TextInput>(null)
+  const editLabelRef = useRef<TextInput>(null)
+  const editAmountRef = useRef<TextInput>(null)
 
   const addIncome = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     const amount = parseFloat(newAmount)
     if (!newLabel || isNaN(amount)) {return}
 
-    if (isDuplicate(incomes, newLabel)) {
-      Alert.alert('Duplicate', `"${newLabel}" already exists in incomes.`)
+    if (isDuplicateLabel(incomes, newLabel)) {
+      Alert.alert('Doublon', `"${newLabel}" existe déjà dans les revenus.`)
       return
     }
 
@@ -45,8 +48,8 @@ export function IncomeSection({ incomes, onIncomesChange }: IncomeSectionProps) 
     const amount = parseFloat(editAmount)
     if (isNaN(amount)) {return}
 
-    if (isDuplicate(incomes, editLabel, editingId!)) {
-      Alert.alert('Duplicate', `"${editLabel}" already exists.`)
+    if (isDuplicateLabel(incomes, editLabel, editingId!)) {
+      Alert.alert('Doublon', `"${editLabel}" existe déjà.`)
       return
     }
 
@@ -55,15 +58,40 @@ export function IncomeSection({ incomes, onIncomesChange }: IncomeSectionProps) 
   }
 
   const deleteIncome = (id: string) => {
-    onIncomesChange(incomes.filter((i) => i.id !== id))
+    const label = incomes.find((i) => i.id === id)?.label || ''
+    setDeleteTarget({ id, label })
+  }
+
+  const confirmDeleteIncome = () => {
+    if (!deleteTarget) { return }
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    onIncomesChange(incomes.filter((i) => i.id !== deleteTarget.id))
+    setDeleteTarget(null)
   }
 
   const renderItem = (item: IncomeEntry) => {
     if (editingId === item.id) {
       return (
         <View style={styles.editRow}>
-          <TextInput style={styles.editInput} value={editLabel} onChangeText={setEditLabel} />
-          <TextInput style={styles.editInput} value={editAmount} onChangeText={setEditAmount} keyboardType="numeric" />
+          <TextInput
+            style={styles.editInput}
+            value={editLabel}
+            onChangeText={setEditLabel}
+            ref={editLabelRef}
+            returnKeyType="next"
+            onSubmitEditing={() => editAmountRef.current?.focus()}
+            blurOnSubmit={false}
+          />
+          <TextInput
+            style={styles.editInput}
+            value={editAmount}
+            onChangeText={setEditAmount}
+            keyboardType="numeric"
+            ref={editAmountRef}
+            returnKeyType="done"
+            onSubmitEditing={saveEdit}
+            blurOnSubmit
+          />
           <TouchableOpacity style={styles.saveBtn} onPress={saveEdit}>
             <Text style={styles.saveBtnText}>✓</Text>
           </TouchableOpacity>
@@ -71,7 +99,7 @@ export function IncomeSection({ incomes, onIncomesChange }: IncomeSectionProps) 
       )
     }
     return (
-      <TouchableOpacity style={styles.expenseRow} onPress={() => startEdit(item)} onLongPress={() => deleteIncome(item.id)} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.expenseRow} onPress={() => startEdit(item)} onLongPress={() => { Vibration.vibrate(10); deleteIncome(item.id) }} activeOpacity={0.7}>
         <Text style={styles.expenseLabel}>{item.label}</Text>
         <Text style={styles.expenseAmount}>${item.amount.toFixed(2)}</Text>
       </TouchableOpacity>
@@ -80,15 +108,44 @@ export function IncomeSection({ incomes, onIncomesChange }: IncomeSectionProps) 
 
   return (
     <>
-      <Text style={styles.sectionTitle}>Income</Text>
+      <Text style={styles.sectionTitle}>Revenus</Text>
       <View style={styles.addRow}>
-        <TextInput style={styles.inputSmall} value={newLabel} onChangeText={setNewLabel} placeholder="Label" placeholderTextColor="#666" />
-        <TextInput style={styles.inputSmall} value={newAmount} onChangeText={setNewAmount} keyboardType="numeric" placeholder="Amount" placeholderTextColor="#666" />
+        <TextInput
+          style={styles.inputSmall}
+          value={newLabel}
+          onChangeText={setNewLabel}
+          placeholder="Libellé"
+          placeholderTextColor="#666"
+          ref={newLabelRef}
+          returnKeyType="next"
+          onSubmitEditing={() => newAmountRef.current?.focus()}
+          blurOnSubmit={false}
+        />
+        <TextInput
+          style={styles.inputSmall}
+          value={newAmount}
+          onChangeText={setNewAmount}
+          keyboardType="numeric"
+          placeholder="Montant"
+          placeholderTextColor="#666"
+          ref={newAmountRef}
+          returnKeyType="done"
+          onSubmitEditing={addIncome}
+          blurOnSubmit
+        />
         <TouchableOpacity style={styles.addBtn} onPress={addIncome}>
           <Text style={styles.addBtnText}>+</Text>
         </TouchableOpacity>
       </View>
-      <FlatList data={incomes} keyExtractor={(item) => item.id} renderItem={({ item }) => renderItem(item)} />
+      <FlatList data={incomes} keyExtractor={(item) => item.id} renderItem={({ item }) => renderItem(item)} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" />
+
+      <ConfirmModal
+        visible={!!deleteTarget}
+        title="Supprimer"
+        message={`Supprimer le revenu "${deleteTarget?.label || ''}" ?`}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDeleteIncome}
+      />
     </>
   )
 }

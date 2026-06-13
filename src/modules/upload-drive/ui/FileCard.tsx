@@ -10,7 +10,7 @@ import {
 } from 'react-native'
 import { useSlideOut } from '../../../core/hooks/useSlideOut'
 import { theme } from '../../../core/theme'
-import { ProgressBar } from '../../../core/ui/ProgressBar'
+import { ProgressBar } from '../../../core/ui'
 import { getMimeCategory } from '../domain/types'
 import type { FileItem } from '../domain/types'
 import { getFileIcon, formatFileSize } from './upload.utils'
@@ -60,6 +60,8 @@ export function FileCard({ file, onNameChange, onDelete, onRemove, onToggleAutoC
         placeholder="Nom du fichier"
         placeholderTextColor={theme.textMuted}
         autoCapitalize="none"
+        returnKeyType="done"
+        blurOnSubmit
       />
 
       {canAutoCompress && (
@@ -105,7 +107,7 @@ export function FileCard({ file, onNameChange, onDelete, onRemove, onToggleAutoC
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.cardBg,
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,

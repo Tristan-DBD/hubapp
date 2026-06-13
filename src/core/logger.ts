@@ -30,5 +30,3 @@ function ensureGlobalHandler(): void {
 }
 
 ensureGlobalHandler()
-
-export const breadcrumbsArray = breadcrumbs

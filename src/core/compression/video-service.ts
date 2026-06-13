@@ -18,24 +18,21 @@ export async function compressVideo(
   const { Video } = await import('react-native-compressor')
 
   const attempts: Array<'auto' | 'manual'> = ['auto', 'manual']
-  const qualities: Array<'high' | 'medium' | 'low'> = ['high', 'medium', 'low']
   let lastError: string | null = null
 
   for (const compressionMethod of attempts) {
-    for (const quality of qualities) {
-      try {
-        const result = await Video.compress(uri, {
-          compressionMethod,
-          quality,
-          progressDivider: VIDEO_COMPRESSION_PROGRESS_DIVIDER,
-          getProgress: (p: number) => {
-            onProgress?.(p / 100)
-          },
-        })
-        return result as string
-      } catch (err) {
-        lastError = extractErrorMessage(err)
-      }
+    try {
+      const result = await Video.compress(uri, {
+        compressionMethod,
+        quality: 'high',
+        progressDivider: VIDEO_COMPRESSION_PROGRESS_DIVIDER,
+        getProgress: (p: number) => {
+          onProgress?.(p / 100)
+        },
+      })
+      return result as string
+    } catch (err) {
+      lastError = extractErrorMessage(err)
     }
   }
 

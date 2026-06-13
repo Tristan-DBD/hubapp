@@ -1,4 +1,4 @@
-import { mmkvGet, mmkvSet, mmkvDelete } from './storage/mmkv'
+import { mmkvGet, mmkvSet, mmkvDelete, mmkvGetAllKeys } from './storage/mmkv'
 import type { DB } from './types'
 
 export function createDB(moduleId: string): DB {
@@ -26,9 +26,6 @@ export function createDB(moduleId: string): DB {
   }
 }
 
-function getAllKeysForPrefix(_prefix: string): string[] {
-  // In MMKV there's no built-in prefix scan.
-  // This is best-effort. The storage.clearAll() will clear everything.
-  // For real isolation, each module could use a separate MMKV instance.
-  return []
+function getAllKeysForPrefix(prefix: string): string[] {
+  return mmkvGetAllKeys().filter((k) => k.startsWith(prefix))
 }

@@ -9,7 +9,7 @@ import {
 } from 'react-native'
 import { useSlideOut } from '../../../core/hooks/useSlideOut'
 import { theme } from '../../../core/theme'
-import { ProgressBar } from '../../../core/ui/ProgressBar'
+import { ProgressBar } from '../../../core/ui'
 import type { VideoItem } from '../domain/types'
 
 interface VideoCardProps {
@@ -87,7 +87,7 @@ export const VideoCard = React.memo(function VideoCardInner({ video, onPressName
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.cardBg,
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,

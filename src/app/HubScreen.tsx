@@ -1,19 +1,38 @@
-import React from 'react'
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native'
+import React, { useRef } from 'react'
+import { Text, FlatList, Pressable, StyleSheet, Animated } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { getAllModules } from '../core/module-registry'
 import { theme } from '../core/theme'
 import type { AppModule } from '../core/types'
 
 interface HubScreenProps {
-  navigation: any;
+  navigation: any
 }
 
-function ModuleCard({ module, onPress }: { module: AppModule; onPress: () => void }) {
+function ModuleCard({
+  module,
+  onPress,
+}: {
+  module: AppModule
+  onPress: () => void
+}) {
+  const scaleAnim = useRef(new Animated.Value(1)).current
+  const onPressIn = () =>
+    Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true }).start()
+  const onPressOut = () =>
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start()
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
-      <Text style={styles.icon}>{module.icon}</Text>
-      <Text style={styles.name}>{module.name}</Text>
-    </TouchableOpacity>
+    <Animated.View style={{ flex: 1, transform: [{ scale: scaleAnim }] }}>
+      <Pressable
+        style={styles.card}
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+      >
+        <Text style={styles.icon}>{module.icon}</Text>
+        <Text style={styles.name}>{module.name}</Text>
+      </Pressable>
+    </Animated.View>
   )
 }
 
@@ -25,27 +44,33 @@ export function HubScreen({ navigation }: HubScreenProps) {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Hub</Text>
       <FlatList
         data={modules}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         numColumns={2}
         contentContainerStyle={styles.grid}
         renderItem={({ item }) => (
           <ModuleCard module={item} onPress={() => handlePress(item)} />
         )}
         ListEmptyComponent={
-          <Text style={styles.empty}>No modules loaded</Text>
+          <Text style={styles.empty}>Aucun module chargé</Text>
         }
       />
-    </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.bg, paddingTop: 60 },
-  title: { fontSize: 32, fontWeight: 'bold', textAlign: 'center', marginBottom: 20, color: theme.primaryLight },
+  container: { flex: 1, backgroundColor: theme.bg },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: theme.primaryLight,
+  },
   grid: { paddingHorizontal: 16 },
   card: {
     flex: 1,
@@ -59,5 +84,10 @@ const styles = StyleSheet.create({
   },
   icon: { fontSize: 40, marginBottom: 8 },
   name: { fontSize: 16, fontWeight: '600', color: theme.text },
-  empty: { textAlign: 'center', marginTop: 40, fontSize: 16, color: theme.textMuted },
+  empty: {
+    textAlign: 'center',
+    marginTop: 40,
+    fontSize: 16,
+    color: theme.textMuted,
+  },
 })

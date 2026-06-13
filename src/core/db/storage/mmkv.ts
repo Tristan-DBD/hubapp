@@ -58,6 +58,10 @@ export function mmkvDelete(key: string): void {
   getStorage().delete(key)
 }
 
+export function mmkvGetAllKeys(): string[] {
+  return getStorage().getAllKeys()
+}
+
 export function mmkvClearAll(): void {
   getStorage().clearAll()
 }

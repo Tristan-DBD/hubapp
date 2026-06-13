@@ -11,8 +11,6 @@ export const theme = {
   success: '#22c55e',
   danger: '#ef4444',
   inputBg: '#1a1a2b',
-  cardBg: '#12121a',
-  headerBg: '#0a0a0f',
 }
 
 export const navigationTheme = {

@@ -1,10 +1,5 @@
-import { GOOGLE_WEB_CLIENT_ID, GOOGLE_DRIVE_SCOPES } from '../config'
-
-interface DriveFolder {
-  id: string;
-  name: string;
-  parents?: string[];
-}
+import { UPLOAD_TIMEOUT_MS } from '../config'
+import type { DriveFolder } from '../types'
 
 const API_BASE = 'https://www.googleapis.com/drive/v3'
 const UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3'
@@ -16,12 +11,7 @@ let _refreshPromise: Promise<boolean> | null = null
 
 async function ensureDriveConfigured(): Promise<void> {
   if (_driveConfigured) {return}
-  const { GoogleSignin } = await import('@react-native-google-signin/google-signin')
-  GoogleSignin.configure({
-    scopes: GOOGLE_DRIVE_SCOPES,
-    webClientId: GOOGLE_WEB_CLIENT_ID || undefined,
-    offlineAccess: false,
-  })
+  // configure() is called by auth-service.ts — no need to duplicate
   _driveConfigured = true
 }
 
@@ -174,7 +164,7 @@ export const driveService = {
       const timeoutId = setTimeout(() => {
         xhr.abort()
         reject(new Error('L\'upload a pris trop de temps, vérifie ta connexion'))
-      }, 300000)
+      }, UPLOAD_TIMEOUT_MS)
 
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable && onProgress) {
@@ -204,7 +194,7 @@ export const driveService = {
       xhr.open('PUT', uploadUrl)
       xhr.setRequestHeader('Authorization', `Bearer ${_accessToken}`)
       xhr.setRequestHeader('Content-Type', mimeType)
-      xhr.send({ uri: fileUri, type: mimeType, name: fileName } as any)
+      xhr.send({ uri: fileUri, type: mimeType, name: fileName } as XMLHttpRequestRequestBodyInit)
     })
   },
 }

@@ -37,3 +37,9 @@ export function calculateAllTotals(data: FinanceData) {
     remaining: calculateRemaining(data),
   }
 }
+
+export function isDuplicateLabel<T extends { id: string; label: string }>(
+  items: T[], label: string, excludeId?: string
+): boolean {
+  return items.some((i) => i.label.toLowerCase() === label.toLowerCase() && i.id !== excludeId)
+}

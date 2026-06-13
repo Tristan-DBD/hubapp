@@ -1,16 +1,15 @@
-import React, { useState, useCallback, useEffect } from 'react'
-import { View, Text, TextInput, FlatList, TouchableOpacity, Alert } from 'react-native'
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { View, Text, TextInput, FlatList, TouchableOpacity, Alert, BackHandler, KeyboardAvoidingView, Platform, Vibration, LayoutAnimation } from 'react-native'
 import { dbManager } from '../../../core/db/db-manager'
 import type { MonthSnapshot } from '../../../core/types'
+import { ConfirmModal } from '../../../core/ui'
 import { getCurrentMonth } from '../../../core/utils'
 import { shouldArchive, archiveMonth } from '../domain/archive'
-import { calculateAllTotals, type IncomeEntry } from '../domain/finance'
+import { calculateAllTotals, isDuplicateLabel, type IncomeEntry } from '../domain/finance'
 import { AccountHistoryModal, SnapshotDetail } from './AccountHistoryModal'
 import { styles } from './AccountsScreen.styles'
 import { IncomeSection } from './IncomeSection'
 import { TotalsCard } from './TotalsCard'
-
-const db = dbManager.getDB('accounts')
 
 interface ExpenseItem {
   amount: number;
@@ -18,17 +17,22 @@ interface ExpenseItem {
   label: string;
 }
 
-function isDuplicate(items: ExpenseItem[], label: string, excludeId?: string): boolean {
-  return items.some((i) => i.label.toLowerCase() === label.toLowerCase() && i.id !== excludeId)
-}
-
 export function AccountsScreen() {
+  const db = useMemo(() => dbManager.getDB('accounts'), [])
   const [incomes, setIncomes] = useState<IncomeEntry[]>(() => db.get('incomes') || [])
   const [fixedExpenses, setFixedExpenses] = useState<ExpenseItem[]>(() => db.get('fixedExpenses') || [])
   const [variableExpenses, setVariableExpenses] = useState<ExpenseItem[]>(() => db.get('variableExpenses') || [])
 
   useEffect(() => {
     dbManager.registerModule('accounts')
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      Alert.alert('Quitter', 'Voulez-vous quitter les comptes ?', [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Quitter', style: 'destructive', onPress: () => BackHandler.exitApp() },
+      ])
+      return true
+    })
+
     const lastArchived = db.get('lastArchivedMonth')
     if (lastArchived && shouldArchive(lastArchived)) {
       const incomeItems: IncomeEntry[] = db.get('incomes') || []
@@ -49,17 +53,25 @@ export function AccountsScreen() {
       db.set('snapshots', newSnapshots)
       setSnapshots(newSnapshots)
     }
-  }, [])
+
+    return () => sub.remove()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Expense form
   const [newLabel, setNewLabel] = useState('')
   const [newAmount, setNewAmount] = useState('')
   const [expenseType, setExpenseType] = useState<'fixed' | 'variable'>('fixed')
+  const newLabelRef = useRef<TextInput>(null)
+  const newAmountRef = useRef<TextInput>(null)
+  const editLabelRef = useRef<TextInput>(null)
+  const editAmountRef = useRef<TextInput>(null)
 
   // Editing
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editLabel, setEditLabel] = useState('')
   const [editAmount, setEditAmount] = useState('')
+
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string; type: 'fixed' | 'variable' } | null>(null)
 
   // History
   const [showHistory, setShowHistory] = useState(false)
@@ -69,15 +81,16 @@ export function AccountsScreen() {
   const persistIncomes = useCallback((items: IncomeEntry[]) => {
     setIncomes(items)
     db.set('incomes', items)
-  }, [])
+  }, [db])
 
   const addExpense = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     const amount = parseFloat(newAmount)
     if (!newLabel || isNaN(amount)) {return}
 
     const target = expenseType === 'fixed' ? fixedExpenses : variableExpenses
-    if (isDuplicate(target, newLabel)) {
-      Alert.alert('Duplicate', `"${newLabel}" already exists in ${expenseType} expenses.`)
+    if (isDuplicateLabel(target, newLabel)) {
+      Alert.alert('Doublon', `"${newLabel}" existe déjà dans les dépenses ${expenseType === 'fixed' ? 'fixes' : 'variables'}.`)
       return
     }
 
@@ -97,7 +110,7 @@ export function AccountsScreen() {
     }
     setNewLabel('')
     setNewAmount('')
-  }, [newLabel, newAmount, expenseType, fixedExpenses, variableExpenses])
+  }, [newLabel, newAmount, expenseType, fixedExpenses, variableExpenses, db])
 
   const startEdit = (item: ExpenseItem) => {
     setEditingId(item.id)
@@ -111,8 +124,8 @@ export function AccountsScreen() {
     if (isNaN(amount)) {return}
 
     const items = type === 'fixed' ? fixedExpenses : variableExpenses
-    if (isDuplicate(items, editLabel, editingId!)) {
-      Alert.alert('Duplicate', `"${editLabel}" already exists.`)
+    if (isDuplicateLabel(items, editLabel, editingId!)) {
+      Alert.alert('Doublon', `"${editLabel}" existe déjà.`)
       return
     }
 
@@ -123,11 +136,19 @@ export function AccountsScreen() {
   }
 
   const deleteExpense = (id: string, type: 'fixed' | 'variable') => {
-    if (type === 'fixed') {
-      setFixedExpenses((prev) => { const updated = prev.filter((i) => i.id !== id); db.set('fixedExpenses', updated); return updated })
+    const label = (type === 'fixed' ? fixedExpenses : variableExpenses).find((i) => i.id === id)?.label || ''
+    setDeleteTarget({ id, type, label })
+  }
+
+  const confirmDeleteExpense = () => {
+    if (!deleteTarget) { return }
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    if (deleteTarget.type === 'fixed') {
+      setFixedExpenses((prev) => { const updated = prev.filter((i) => i.id !== deleteTarget.id); db.set('fixedExpenses', updated); return updated })
     } else {
-      setVariableExpenses((prev) => { const updated = prev.filter((i) => i.id !== id); db.set('variableExpenses', updated); return updated })
+      setVariableExpenses((prev) => { const updated = prev.filter((i) => i.id !== deleteTarget.id); db.set('variableExpenses', updated); return updated })
     }
+    setDeleteTarget(null)
   }
 
   const totals = calculateAllTotals({
@@ -140,8 +161,25 @@ export function AccountsScreen() {
     if (editingId === item.id) {
       return (
         <View style={styles.editRow}>
-          <TextInput style={styles.editInput} value={editLabel} onChangeText={setEditLabel} />
-          <TextInput style={styles.editInput} value={editAmount} onChangeText={setEditAmount} keyboardType="numeric" />
+          <TextInput
+            style={styles.editInput}
+            value={editLabel}
+            onChangeText={setEditLabel}
+            ref={editLabelRef}
+            returnKeyType="next"
+            onSubmitEditing={() => editAmountRef.current?.focus()}
+            blurOnSubmit={false}
+          />
+          <TextInput
+            style={styles.editInput}
+            value={editAmount}
+            onChangeText={setEditAmount}
+            keyboardType="numeric"
+            ref={editAmountRef}
+            returnKeyType="done"
+            onSubmitEditing={() => saveEdit(type)}
+            blurOnSubmit
+          />
           <TouchableOpacity style={styles.saveBtn} onPress={() => saveEdit(type)}>
             <Text style={styles.saveBtnText}>✓</Text>
           </TouchableOpacity>
@@ -149,7 +187,7 @@ export function AccountsScreen() {
       )
     }
     return (
-      <TouchableOpacity style={styles.expenseRow} onPress={() => startEdit(item)} onLongPress={() => deleteExpense(item.id, type)} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.expenseRow} onPress={() => startEdit(item)} onLongPress={() => { Vibration.vibrate(10); deleteExpense(item.id, type) }} activeOpacity={0.7}>
         <Text style={styles.expenseLabel}>{item.label}</Text>
         <Text style={styles.expenseAmount}>${item.amount.toFixed(2)}</Text>
       </TouchableOpacity>
@@ -160,10 +198,10 @@ export function AccountsScreen() {
     const updated = snapshots.filter((s) => s.archivedAt !== archivedAt)
     setSnapshots(updated)
     db.set('snapshots', updated)
-  }, [snapshots])
+  }, [snapshots, db])
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <IncomeSection incomes={incomes} onIncomesChange={persistIncomes} />
 
       <TotalsCard
@@ -174,30 +212,51 @@ export function AccountsScreen() {
       />
 
       <TouchableOpacity style={styles.historyBtn} onPress={() => setShowHistory(true)}>
-        <Text style={styles.historyBtnText}>History</Text>
+        <Text style={styles.historyBtnText}>Historique</Text>
       </TouchableOpacity>
 
       <View style={styles.addRow}>
-        <TextInput style={styles.inputSmall} value={newLabel} onChangeText={setNewLabel} placeholder="Label" placeholderTextColor="#666" />
-        <TextInput style={styles.inputSmall} value={newAmount} onChangeText={setNewAmount} keyboardType="numeric" placeholder="Amount" placeholderTextColor="#666" />
+        <TextInput
+          style={styles.inputSmall}
+          value={newLabel}
+          onChangeText={setNewLabel}
+          placeholder="Libellé"
+          placeholderTextColor="#666"
+          ref={newLabelRef}
+          returnKeyType="next"
+          onSubmitEditing={() => newAmountRef.current?.focus()}
+          blurOnSubmit={false}
+        />
+        <TextInput
+          style={styles.inputSmall}
+          value={newAmount}
+          onChangeText={setNewAmount}
+          keyboardType="numeric"
+          placeholder="Montant"
+          placeholderTextColor="#666"
+          ref={newAmountRef}
+          returnKeyType="done"
+          onSubmitEditing={addExpense}
+          blurOnSubmit
+        />
       </View>
       <View style={styles.typeRow}>
         <TouchableOpacity style={[styles.typeBtn, expenseType === 'fixed' && styles.typeBtnActive]} onPress={() => setExpenseType('fixed')}>
-          <Text style={[styles.typeBtnText, expenseType === 'fixed' && styles.typeBtnTextActive]}>Fixed</Text>
+          <Text style={[styles.typeBtnText, expenseType === 'fixed' && styles.typeBtnTextActive]}>Fixes</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.typeBtn, expenseType === 'variable' && styles.typeBtnActive]} onPress={() => setExpenseType('variable')}>
-          <Text style={[styles.typeBtnText, expenseType === 'variable' && styles.typeBtnTextActive]}>Variable</Text>
+          <Text style={[styles.typeBtnText, expenseType === 'variable' && styles.typeBtnTextActive]}>Variables</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.addBtn} onPress={addExpense}>
           <Text style={styles.addBtnText}>+</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>Fixed Expenses</Text>
-      <FlatList data={fixedExpenses} keyExtractor={(item) => item.id} renderItem={({ item }) => renderItem(item, 'fixed')} />
+      <Text style={styles.sectionTitle}>Dépenses fixes</Text>
+      <FlatList data={fixedExpenses} keyExtractor={(item) => item.id} renderItem={({ item }) => renderItem(item, 'fixed')} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" />
 
-      <Text style={styles.sectionTitle}>Variable Expenses</Text>
-      <FlatList data={variableExpenses} keyExtractor={(item) => item.id} renderItem={({ item }) => renderItem(item, 'variable')} />
+      <Text style={styles.sectionTitle}>Dépenses variables</Text>
+      <FlatList data={variableExpenses} keyExtractor={(item) => item.id} renderItem={({ item }) => renderItem(item, 'variable')} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" />
 
       {showHistory && !selectedSnapshot && (
         <AccountHistoryModal snapshots={snapshots} onSelect={setSelectedSnapshot} onClose={() => setShowHistory(false)} onDeleteSnapshot={deleteSnapshot} />
@@ -206,6 +265,14 @@ export function AccountsScreen() {
       {selectedSnapshot && (
         <SnapshotDetail snapshot={selectedSnapshot} onBack={() => setSelectedSnapshot(null)} />
       )}
-    </View>
+
+      <ConfirmModal
+        visible={!!deleteTarget}
+        title="Supprimer"
+        message={`Supprimer la dépense "${deleteTarget?.label || ''}" ?`}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDeleteExpense}
+      />
+    </KeyboardAvoidingView>
   )
 }

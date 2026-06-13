@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal } from 'react-native'
 import { theme } from '../../../core/theme'
 import { generateFinalName, validateChargeInput } from '../domain/types'
@@ -24,6 +24,8 @@ export function VideoNamePopup({
   const [chargeStr, setChargeStr] = useState(
     initialCharge !== null ? String(initialCharge).replace('.', ',') : '',
   )
+  const movementRef = useRef<TextInput>(null)
+  const chargeRef = useRef<TextInput>(null)
 
   const preview = generateFinalName(movement, validateChargeInput(chargeStr))
 
@@ -33,7 +35,7 @@ export function VideoNamePopup({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
         <View style={styles.popup}>
           <Text style={styles.title}>Nom de la vidéo</Text>
@@ -45,6 +47,10 @@ export function VideoNamePopup({
             onChangeText={setMovement}
             placeholder="ex: squat"
             placeholderTextColor={theme.textMuted}
+            ref={movementRef}
+            returnKeyType="next"
+            onSubmitEditing={() => chargeRef.current?.focus()}
+            blurOnSubmit={false}
           />
           <View style={styles.quickRow}>
             {MOVEMENT_QUICK.map((m) => (
@@ -76,6 +82,10 @@ export function VideoNamePopup({
             placeholder="ex: 197,5"
             placeholderTextColor={theme.textMuted}
             keyboardType="numeric"
+            ref={chargeRef}
+            returnKeyType="done"
+            onSubmitEditing={handleSave}
+            blurOnSubmit
           />
 
           {preview ? (

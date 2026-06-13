@@ -42,7 +42,7 @@ export function PermissionGate({ children }: Props) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>HubApp</Text>
-        <ActivityIndicator size="large" color={theme.accent} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     )
   }
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   },
   instruction: {
     fontSize: 15,
-    color: theme.accent,
+    color: theme.primary,
     textAlign: 'left',
     lineHeight: 24,
     marginBottom: 32,
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   button: {
-    backgroundColor: theme.accent,
+    backgroundColor: theme.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 10,

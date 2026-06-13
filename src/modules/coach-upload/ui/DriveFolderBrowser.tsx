@@ -254,6 +254,9 @@ export function DriveFolderBrowser({ onSave, onCancel }: DriveFolderBrowserProps
                   onChangeText={setNewFolderName}
                   placeholder={`Nouveau ${current.label}`}
                   placeholderTextColor={theme.textMuted}
+                  returnKeyType="done"
+                  onSubmitEditing={handleCreateFolder}
+                  blurOnSubmit
                 />
                 <TouchableOpacity
                   style={[styles.createBtn, (!newFolderName.trim() || creating) && styles.disabled]}
